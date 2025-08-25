@@ -1,57 +1,38 @@
 use anchor_lang::prelude::*;
+use crate::Contract;
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
+    #[account(mut)]
+    pub company: Signer<'info>,
 
-  #[account(mut)]
-  pub company: Signer<'info>,
+    /// CHECK: The account is verified by its use as a seed below.
+    pub contractor: UncheckedAccount<'info>,
 
-  pub contractor: UncheckedAccount<'info>,
+    #[account(
+        init,
+        payer = company,
+        space = Contract::INIT_SPACE,
+        seeds = [b"contract", company.key().as_ref(), contractor.key().as_ref()],
+        bump
+    )]
+    pub contract: Account<'info, Contract>,
 
-  #[account(
+    #[account(
     init,
     payer = company,
-    space = Contract::INIT_SPACE,
-    seeds = [b"contract", company.key().as_ref(), contractor.key().as_ref()],
-    bump
-  )]
-  pub contract: Account<'info, Contract>,
-
-  #[account(
-    init,
-    payer = company,
+    space = 0,
     seeds = [b"vault", contract.key().as_ref()],
     bump,
-    space = 8
-  )]
-  pub vault: SystemAccount<'info>,
+    )]
+    /// CHECK: This PDA is only used to hold lamports. No data is read or written.
+    pub vault: AccountInfo<'info>,
 
-  pub system_program: Program<'info, System>,
+    // Right now your vault is just a bare lamport holder. That’s fine if you only need to escrow/deposit SOL.
+    // But if later you want to:
+    // Track balances,
+    // Or store some metadata,
+    // then you’d need to give it a custom Account type instead of just lamports.
 
-}
-impl Contract {
-    pub fn init(
-        &mut self,
-        company: Pubkey,
-        contractor: Pubkey,
-        budget: u64,
-        start_time: i64,
-        penalty_time: i64,
-        terminate_time: i64,
-        bumps: &InitializeBumps,
-        
-    ) -> Result<()> {
-        self.bump = bumps.contract;
-        self.company = company;
-        self.contractor = contractor;
-        self.budget = budget;
-        self.start_time = start_time;
-        self.penalty_time = penalty_time;
-        self.terminate_time = terminate_time;
-
-        // transfer budget into vault
-
-
-        Ok(())
-    }
+    pub system_program: Program<'info, System>,
 }
